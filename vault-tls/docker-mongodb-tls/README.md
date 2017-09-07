@@ -40,7 +40,7 @@ or (in case you want to authenticate with a client side cert)
 
 Here an example about how to generate users with x509 authentication:
 
-db.getSiblingDB("$external").runCommand(
+`db.getSiblingDB("$external").runCommand(
   {
     createUser: "CN=mongo-client",
     roles: [
@@ -49,11 +49,11 @@ db.getSiblingDB("$external").runCommand(
            ],
     writeConcern: { w: "majority" , wtimeout: 5000 }
   }
-)
+)`
 
-db.getSiblingDB("$external").auth(
+`db.getSiblingDB("$external").auth(
   {
     mechanism: "MONGODB-X509",
     user: "CN=mongo-client"
   }
-)
+)`
