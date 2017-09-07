@@ -1,49 +1,59 @@
 # docker-alpine-mongo
 
 This repository contains Dockerfile for [MongoDB 3.4](https://www.mongodb.org)
-container, based on the [Alpine edge](https://hub.docker.com/_/alpine/) image.
-
-Why ? the official mongo image size: 360 MB, alpine-mongo: 106 MB
+container, based on the [Alpine 3.6](https://hub.docker.com/_/alpine/) image.
 
 ## Install
 
 As a prerequisite, you need [Docker](https://docker.com) to be installed.
 
-To download this image from the public docker hub:
-
-	$ docker pull mvertes/alpine-mongo
-
 To re-build this image from the dockerfile:
 
-	$ docker build -t mvertes/alpine-mongo .
+	$ docker build -t client/mongodb .
 
 ## Usage
 
 To run `mongod`:
 
-	$ docker run -d --name mongo -p 27017:27017 mvertes/alpine-mongo
+	$ docker run -d --name mongodb -p 27017:27017 client/mongodb
 
 You can also specify the database repository where to store the data
 with the volume -v option:
 
     $ docker run -d --name mongo -p 27017:27017 \
-	  -v /somewhere/onmyhost/mydatabase:/data/db \
-	  mvertes/alpine-mongo
+	  -v /somewhere/onmyhost/mydatabase:/mongodb/data/db \
+	  client/mongodb
 
 To run a shell session:
 
-    $ docker exec -ti mongo sh
+    $ docker exec -ti mongodb sh
 
-To use the mongo shell client:
+## TLS/SSL 
 
-	$ docker exec -ti mongo mongo
+This image is configured with TLS/SSL certificates generated from Vault. To be able to connect from any client you will need to set the SSL config:
 
-The mongo shell client can also be run its own container: 
+	$ mongo --ssl --sslPEMKeyFile /mongodb/certs/mongodb-cert.pem --sslCAFile /mongodb/certs/mongodb-ca.pem --host mongodb.client.com
 
-	$ docker run -ti --rm --name mongoshell monogo host:port/db
+or (in case you want to authenticate with a client side cert)
 
-## Limitations
+	$ mongo --ssl --sslPEMKeyFile /mongodb/certs/mongodb-client-cert.pem --sslCAFile /mongodb/certs/mongodb-ca.pem --host mongodb.client.com
 
-- On MacOSX, volumes located in a virtualbox shared folder are not
-  supported, due to a limitation of virtualbox (default docker-machine
-  driver) not supporting fsync().
+Here an example about how to generate users with x509 authentication:
+
+db.getSiblingDB("$external").runCommand(
+  {
+    createUser: "CN=mongo-client",
+    roles: [
+             { role: 'readWrite', db: 'admin' },
+             { role: 'userAdminAnyDatabase', db: 'admin' }
+           ],
+    writeConcern: { w: "majority" , wtimeout: 5000 }
+  }
+)
+
+db.getSiblingDB("$external").auth(
+  {
+    mechanism: "MONGODB-X509",
+    user: "CN=mongo-client"
+  }
+)
